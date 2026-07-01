@@ -1,0 +1,251 @@
+# Example: Complex book-production pipeline with DAG, parallel, sub-pipeline, fan-out, routing
+pipeline:
+  name: "book-production"
+  version: "1.0.0"
+  description: "Full book production pipeline: write chapters in parallel → audit → fix → export"
+
+  meta:
+    category: "creative"
+    execution_model: "dag"
+    auto_continue: true
+    user_invocable: true
+    allowed_tools: [Read, Write, Edit, Bash, Grep, Glob]
+    max_repair_rounds: 3
+    context_budget_tokens: 120000
+
+  contracts:
+    state:
+      book_path:
+        type: "string"
+        pattern: "^works/[^/]+/$"
+        description: "Path to book canonical directory"
+      chapter_list:
+        type: "array"
+        description: "List of chapter numbers to process"
+      quality_threshold:
+        type: "integer"
+        min: 1
+        max: 10
+        default: 7
+      export_format:
+        type: "string"
+        enum: ["pdf", "epub", "both"]
+        default: "both"
+
+    stage_io:
+      write_all:
+        output: "BatchWriteResult"
+      audit_all:
+        input_from: "write_all"
+        output: "BatchAuditResult"
+      fix_all:
+        input_from: "audit_all"
+        output: "BatchFixResult"
+        writes_to_state: ["chapter_list"]
+      quality_route:
+        input_from: "fix_all"
+        output: "QualityReview"
+      export:
+        input_from: "quality_route"
+        output: "ExportResult"
+      marketing:
+        input_from: "write_all"
+        output: "MarketingResult"
+
+  stages:
+    # Stage 1: Write all chapters in parallel using fan-out
+    - id: "write_all"
+      name: "WRITE_ALL"
+      order: 1
+      description: "Write all pending chapters in parallel"
+      fan_out:
+        pipeline: "writing-pipeline"
+        mode: "async"
+        concurrency: 2
+        items:
+          from: "$.state.chapter_list"
+          param_mapping:
+            chapter: "$.item"
+        collect: "results[]"
+      fan_in:
+        aggregator: "builtin:merge_array"
+        on_partial_failure: "continue"
+      output_schema: "BatchWriteResult"
+      timeout_minutes: 60
+      on_timeout: "fail_partial"
+
+    # Stage 2: Audit all newly written chapters in parallel
+    - id: "audit_all"
+      name: "AUDIT_ALL"
+      order: 2
+      depends_on: ["write_all"]
+      fan_out:
+        pipeline: "narrative-consistency"
+        mode: "async"
+        concurrency: 3
+        items:
+          from: "$.write_all.results"
+          filter: "$.item.gate_decision == 'PASS'"
+          param_mapping:
+            chapter: "$.item.chapter"
+        collect: "results[]"
+      fan_in:
+        aggregator: "builtin:merge_array"
+        on_partial_failure: "continue"
+      output_schema: "BatchAuditResult"
+
+    # Stage 3: Fix chapters that failed audit
+    - id: "fix_all"
+      name: "FIX_ALL"
+      order: 3
+      depends_on: ["audit_all"]
+      fan_out:
+        pipeline: "consistency-revision"
+        mode: "async"
+        concurrency: 2
+        items:
+          from: "$.audit_all.results"
+          filter: "$.item.gate_decision == 'BLOCK'"
+          param_mapping:
+            chapter: "$.item.chapter"
+            issues: "$.item.issues"
+        collect: "results[]"
+      fan_in:
+        aggregator: "builtin:merge_array"
+        on_partial_failure: "continue"
+      output_schema: "BatchFixResult"
+      on_failure:
+        action: "repair"
+        backtrack_to: "audit_all"
+        max_rounds: 2
+
+    # Stage 4: Quality routing based on overall score
+    - id: "quality_route"
+      name: "QUALITY_ROUTER"
+      order: 4
+      depends_on: ["fix_all"]
+      invocations:
+        - skill: "quality-review"
+          mode: "score"
+          params:
+            results: "$.fix_all.results"
+      output_schema: "QualityReview"
+      routing:
+        - condition:
+            expression: "$.output.comprehensive_score >= 9.0"
+          route_to: "export"
+        - condition:
+            expression: "$.output.comprehensive_score >= 7.0"
+          route_to: "light_fix"
+        - default: "deep_fix"
+
+    # Stage 5: Export if quality passes
+    - id: "export"
+      name: "EXPORT"
+      order: 5
+      depends_on: ["quality_route"]
+      parallel:
+        - pipeline: "novel-export"
+          mode: "async"
+          params:
+            chapters: "$.write_all.results"
+            format: "$.state.export_format"
+          output_as: "export_result"
+        - pipeline: "cover-generator"
+          mode: "async"
+          params:
+            book: "$.state.book_path"
+          output_as: "cover_result"
+      join: "all"
+      timeout_minutes: 30
+      on_timeout: "fail_partial"
+      output_schema: "ExportResult"
+
+    # Stage 6: Light fix (cheaper retry path)
+    - id: "light_fix"
+      name: "LIGHT_FIX"
+      order: 6
+      sub_pipeline:
+        name: "light-polish"
+        max_repair_rounds: 1
+        stages:
+          - id: "polish"
+            name: "POLISH"
+            order: 1
+            invocations:
+              - skill: "prose-polish"
+                mode: "apply"
+            output_schema: "PolishResult"
+          - id: "recheck"
+            name: "RECHECK"
+            order: 2
+            invocations:
+              - skill: "narrative-consistency"
+                mode: "light"
+          - id: "re_export"
+            name: "RE_EXPORT"
+            order: 3
+            invocations:
+              - skill: "novel-export"
+                mode: "quick"
+
+    # Stage 7: Deep fix (full rewrite path)
+    - id: "deep_fix"
+      name: "DEEP_FIX"
+      order: 7
+      invocations:
+        - pipeline: "writing-pipeline"
+          mode: "inline"
+          params:
+            repair_mode: "full"
+            chapters: "$.fix_all.failed_chapters"
+
+    # Stage 8: Marketing (parallel branch, runs independently)
+    - id: "marketing"
+      name: "MARKETING"
+      order: 8
+      depends_on: ["write_all"]
+      parallel:
+        - pipeline: "blurb-generator"
+          mode: "async"
+          params:
+            chapters: "$.write_all.results"
+          output_as: "blurbs"
+        - pipeline: "social-post-gen"
+          mode: "async"
+          params:
+            chapters: "$.write_all.results"
+          output_as: "posts"
+      join: "all"
+      output_schema: "MarketingResult"
+
+  cross_pipeline:
+    isolation:
+      state_boundary: "works/<book>/canon/"
+      forbidden_read:
+        - "~/.goal-state/projects/*/state.json"
+    coordination:
+      - to_pipeline: "publish-pipeline"
+        trigger: "production_complete"
+        trigger_on: "export.complete"
+
+  observability:
+    execution_log:
+      enabled: true
+      path: "evidence/execution-log.yaml"
+    health_check:
+      enabled: true
+    metrics:
+      - name: "stage_duration_seconds"
+        type: "gauge"
+      - name: "gate_pass_rate"
+        type: "counter"
+      - name: "repair_rounds"
+        type: "histogram"
+
+  never_rules:
+    - "NEVER skip audit before export"
+    - "NEVER write to canon/state.md from multiple stages"
+    - "NEVER exceed 3 repair rounds for any chapter"
+    - "NEVER ignore gate script exit 1"
+    - "NEVER publish without quality score >= 7.0"

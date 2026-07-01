@@ -1,0 +1,39 @@
+name: Pipeline Quality Check
+
+on:
+  push:
+    paths:
+      - '**/*.yaml'
+      - '**/SKILL.md'
+  pull_request:
+    paths:
+      - '**/*.yaml'
+      - '**/SKILL.md'
+
+jobs:
+  pipeline-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      
+      - name: Install Pipeline CLI
+        run: pip install pipeline-cli
+      
+      - name: Audit all pipelines
+        run: pipeline audit --ci --format json
+      
+      - name: Validate changed DSL files
+        run: |
+          for f in $(git diff --name-only HEAD~1 | grep '\.yaml$'); do
+            if grep -q "^pipeline:" "$f" 2>/dev/null; then
+              pipeline validate "$f" --strict
+            fi
+          done
+      
+      - name: Quick score summary
+        run: pipeline score --all

@@ -1,0 +1,95 @@
+# Example: Simple sequential pipeline
+pipeline:
+  name: "simple-code-review"
+  version: "1.0.0"
+  description: "A simple code review pipeline: parse diff → scan → report"
+
+  meta:
+    category: "engineering"
+    execution_model: "sequential"
+    auto_continue: true
+    user_invocable: true
+    allowed_tools: [Read, Write, Edit, Bash, Grep]
+    max_repair_rounds: 3
+
+  contracts:
+    state:
+      repo_path:
+        type: "string"
+        description: "Path to the repository"
+      review_mode:
+        type: "string"
+        enum: ["quick", "standard", "deep"]
+        default: "standard"
+
+    stage_io:
+      parse_diff:
+        output: "ParseResult"
+      security_scan:
+        input_from: "parse_diff"
+        output: "SecurityResult"
+      generate_report:
+        input_from: "security_scan"
+        output: "ReportOutput"
+
+  stages:
+    - id: "parse_diff"
+      name: "PARSE_DIFF"
+      order: 1
+      description: "Parse git diff to extract changed files and content"
+      invocations:
+        - skill: "diff-parser"
+          mode: "extract"
+          params:
+            repo_path: "$.state.repo_path"
+      output_schema: "ParseResult"
+      gate:
+        type: "deterministic"
+        checks:
+          - field: "output.files"
+            condition: "non_empty"
+            message: "No changed files found in diff"
+
+    - id: "security_scan"
+      name: "SECURITY_SCAN"
+      order: 2
+      description: "Scan changed files for security vulnerabilities"
+      invocations:
+        - skill: "security-scanner"
+          mode: "audit"
+          params:
+            files: "$.parse_diff.output.files"
+            mode: "$.state.review_mode"
+      output_schema: "SecurityResult"
+      gate:
+        type: "deterministic"
+        checks:
+          - field: "output.critical_count"
+            condition: "eq"
+            value: 0
+            message: "Critical security issues found"
+          - field: "output.high_count"
+            condition: "lte"
+            value: 3
+            message: "Too many high-severity issues"
+      on_failure:
+        action: "repair"
+        backtrack_to: "parse_diff"
+        max_rounds: 2
+
+    - id: "generate_report"
+      name: "GENERATE_REPORT"
+      order: 3
+      description: "Generate a code review report from scan results"
+      invocations:
+        - skill: "report-generator"
+          mode: "generate"
+          params:
+            security: "$.security_scan.output"
+      output_schema: "ReportOutput"
+
+  never_rules:
+    - "NEVER skip security scan before generating report"
+    - "NEVER ignore gate script exit 1"
+    - "NEVER exceed max 2 repair rounds"
+    - "NEVER modify files outside the diff scope"

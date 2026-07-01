@@ -1,0 +1,30 @@
+[project]
+name = "pipeline-cli"
+version = "0.1.0"
+description = "Pipeline Engineering Platform - CLI tool for creating, compiling, auditing, and fixing AI agent pipelines"
+requires-python = ">=3.10"
+dependencies = [
+    "click>=8.1",
+    "pydantic>=2.0",
+    "pyyaml>=6.0",
+    "jsonschema>=4.0",
+    "jinja2>=3.0",
+    "rich>=13.0",
+]
+
+[project.scripts]
+pipeline = "pipeline_cli.cli:main"
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-cov>=4.0",
+    "ruff>=0.1",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
