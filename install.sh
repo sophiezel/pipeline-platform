@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Pipeline Platform one-click installer
+# 管线平台一键安装脚本
 set -euo pipefail
 
 REPO_URL="${PIPELINE_REPO_URL:-https://github.com/sophiezel/pipeline-platform.git}"
@@ -13,7 +13,7 @@ die() { printf '❌ %s\n' "$*" >&2; exit 1; }
 if [[ -f "${BASH_SOURCE[0]:-}" ]] && [[ -f "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/pyproject.toml" ]]; then
   ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 else
-  log "Cloning pipeline-platform → ${INSTALL_DIR}"
+  log "正在克隆 pipeline-platform → ${INSTALL_DIR}"
   mkdir -p "$(dirname "$INSTALL_DIR")"
   if [[ -d "$INSTALL_DIR/.git" ]]; then
     git -C "$INSTALL_DIR" pull --ff-only

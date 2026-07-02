@@ -20,7 +20,7 @@ from pipeline_cli.models import (
 TEMPLATES = {
     "sequential-engineering": {
         "name": "Sequential Engineering Pipeline",
-        "description": "Standard sequential pipeline for code/task workflows: parse → process → validate → report",
+        "description": "工程顺序管线：解析 → 处理 → 验证 → 报告",
         "category": "engineering",
         "execution_model": "sequential",
         "stages": [
@@ -32,7 +32,7 @@ TEMPLATES = {
     },
     "sequential-creative": {
         "name": "Sequential Creative Pipeline",
-        "description": "Standard sequential pipeline for creative workflows: prepare → generate → review → polish → publish",
+        "description": "创作顺序管线：准备 → 生成 → 审阅 → 润色 → 发布",
         "category": "creative",
         "execution_model": "sequential",
         "stages": [
@@ -45,7 +45,7 @@ TEMPLATES = {
     },
     "dag-analysis": {
         "name": "DAG Analysis Pipeline",
-        "description": "DAG-based parallel analysis: fan-out analysis → aggregate → route by quality → report/escalate",
+        "description": "DAG 并行分析：扇出分析 → 聚合 → 按质量路由 → 报告/升级",
         "category": "analysis",
         "execution_model": "dag",
         "stages": [
@@ -59,7 +59,7 @@ TEMPLATES = {
     },
     "audit-repair-loop": {
         "name": "Audit-Repair Loop Pipeline",
-        "description": "Generic audit → repair → re-audit cycle: scan issues → fix → verify → report",
+        "description": "审计 → 修复 → 复审计循环：扫描问题 → 修复 → 验证 → 报告",
         "category": "engineering",
         "execution_model": "sequential",
         "stages": [
@@ -71,7 +71,7 @@ TEMPLATES = {
     },
     "fan-out-batch": {
         "name": "Fan-Out Batch Pipeline",
-        "description": "Batch processing with fan-out: split items → parallel process → collect results → report",
+        "description": "扇出批处理：拆分条目 → 并行处理 → 汇总结果 → 报告",
         "category": "engineering",
         "execution_model": "dag",
         "stages": [
@@ -192,16 +192,16 @@ def interactive_create() -> PipelineDefinition:
     print("└─────────────────────────────────────────┘\n")
 
     # Step 1: Choose template or custom
-    print("Available templates:")
+    print("可用模板:")
     for i, (key, tmpl) in enumerate(TEMPLATES.items()):
         print(f"  [{i+1}] {key}: {tmpl['description']}")
-    print(f"  [0] Custom (build from scratch)")
+    print(f"  [0] 自定义（从零创建）")
 
-    choice = input("\nChoose template [0-5]: ").strip()
+    choice = input("\n选择模板 [0-5]: ").strip()
     if choice.isdigit() and 1 <= int(choice) <= len(TEMPLATES):
         template_key = list(TEMPLATES.keys())[int(choice) - 1]
         pipeline = build_from_template(template_key)
-        print(f"\n✓ Using template: {template_key}")
+        print(f"\n✓ 已选用模板: {template_key}")
         return _customize_template(pipeline)
 
     # Custom build
@@ -210,21 +210,21 @@ def interactive_create() -> PipelineDefinition:
 
 def _customize_template(pipeline: PipelineDefinition) -> PipelineDefinition:
     """Allow user to customize a template pipeline."""
-    name = input(f"Pipeline name [{pipeline.name}]: ").strip()
+    name = input(f"管线名称 [{pipeline.name}]: ").strip()
     if name:
         pipeline.name = name
 
-    desc = input(f"Description [{pipeline.description[:60]}...]: ").strip()
+    desc = input(f"描述 [{pipeline.description[:60]}...]: ").strip()
     if desc:
         pipeline.description = desc
 
     # Show stages, allow editing
-    print(f"\nStages ({len(pipeline.stages)}):")
+    print(f"\n阶段 ({len(pipeline.stages)}):")
     for s in pipeline.stages:
         invs = ", ".join(i.skill for i in s.invocations if i.skill)
         print(f"  {s.order}. {s.name} → {invs}")
 
-    if input("\nEdit stages? [y/N]: ").strip().lower() == "y":
+    if input("\n编辑阶段? [y/N]: ").strip().lower() == "y":
         pipeline = _edit_stages(pipeline)
 
     return pipeline
@@ -232,22 +232,22 @@ def _customize_template(pipeline: PipelineDefinition) -> PipelineDefinition:
 
 def _build_custom() -> PipelineDefinition:
     """Build a pipeline from scratch interactively."""
-    name = input("Pipeline name: ").strip()
+    name = input("管线名称: ").strip()
     if not name:
         name = f"custom-pipeline-{datetime.now().strftime('%Y%m%d')}"
 
     cat_map = {"1": "engineering", "2": "creative", "3": "analysis", "4": "custom"}
-    print("\nCategories: [1] engineering [2] creative [3] analysis [4] custom")
-    cat = input("Category [1]: ").strip() or "1"
+    print("\n类别: [1] engineering [2] creative [3] analysis [4] custom")
+    cat = input("类别 [1]: ").strip() or "1"
 
     exec_map = {"1": "sequential", "2": "dag"}
-    print("\nExecution model: [1] sequential [2] dag")
-    exec_choice = input("Model [1]: ").strip() or "1"
+    print("\n执行模式: [1] sequential [2] dag")
+    exec_choice = input("模式 [1]: ").strip() or "1"
 
     pipeline = PipelineDefinition(
         name=name,
         version="1.0.0",
-        description=input("Description (one line): ").strip() or f"Pipeline: {name}",
+        description=input("描述（一行）: ").strip() or f"管线: {name}",
         meta=PipelineMeta(
             category=PipelineCategory(cat_map.get(cat, "engineering")),
             execution_model=ExecutionModel(exec_map.get(exec_choice, "sequential")),
@@ -265,15 +265,15 @@ def _build_custom() -> PipelineDefinition:
 def _edit_stages(pipeline: PipelineDefinition) -> PipelineDefinition:
     """Edit stages interactively."""
     if pipeline.stages:
-        keep = input("Clear existing stages? [y/N]: ").strip().lower()
+        keep = input("清空现有阶段? [y/N]: ").strip().lower()
         if keep == "y":
             pipeline.stages = []
 
-    print("\nDefine stages (empty line to finish):")
+    print("\n定义阶段（空行结束）:")
     i = len(pipeline.stages)
     while True:
         i += 1
-        line = input(f"  Stage {i} (format: NAME skill_name mode): ").strip()
+        line = input(f"  阶段 {i}（格式: 名称 skill_name mode）: ").strip()
         if not line:
             break
 
@@ -286,8 +286,8 @@ def _edit_stages(pipeline: PipelineDefinition) -> PipelineDefinition:
         if skill:
             invocations.append(Invocation(skill=skill, mode=mode))
 
-        has_gate = input(f"    Gate for {stage_name}? [y/N]: ").strip().lower() == "y"
-        has_repair = input(f"    Repair on failure? [y/N]: ").strip().lower() == "y"
+        has_gate = input(f"    阶段 {stage_name} 需要门禁? [y/N]: ").strip().lower() == "y"
+        has_repair = input(f"    失败时启用修正循环? [y/N]: ").strip().lower() == "y"
 
         gate = None
         if has_gate:
@@ -296,7 +296,7 @@ def _edit_stages(pipeline: PipelineDefinition) -> PipelineDefinition:
                 checks=[GateCheck(
                     field=f"{stage_name.lower()}.output",
                     condition="non_empty",
-                    message=f"{stage_name} must produce output",
+                    message=f"{stage_name} 必须产出输出",
                 )]
             )
 
@@ -328,13 +328,13 @@ def from_existing_skill_md(skill_path: str) -> PipelineDefinition | None:
     parser = SkillMDParser()
     parsed = parser.parse(skill_path)
     if not parsed:
-        print(f"Could not parse pipeline structure from {skill_path}")
+        print(f"无法从 {skill_path} 解析管线结构")
         return None
 
     pipeline = PipelineDefinition(
         name=parsed.name,
         version="1.0.0",
-        description=f"Reverse-engineered from {Path(skill_path).parent.name}",
+        description=f"从 {Path(skill_path).parent.name} 逆向生成",
     )
 
     for stage in parsed.stages:
@@ -357,6 +357,6 @@ def from_existing_skill_md(skill_path: str) -> PipelineDefinition | None:
     if parsed.has_never_section:
         pipeline.never_rules = parsed.never_rules
 
-    print(f"✓ Reverse-engineered {len(pipeline.stages)} stages from {skill_path}")
-    print(f"  Review the generated DSL before use.")
+    print(f"✓ 已从 {skill_path} 逆向提取 {len(pipeline.stages)} 个阶段")
+    print(f"  使用前请审查生成的 DSL。")
     return pipeline

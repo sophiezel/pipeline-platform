@@ -103,7 +103,7 @@ def fix_add_isolation(pipeline: PipelineDefinition) -> tuple[PipelineDefinition,
         "state_boundary": "works/<book>/canon/",
         "forbidden_read": ["~/.goal-state/projects/*/state.json"],
     }
-    return pipeline, "Added cross-pipeline isolation with default boundaries"
+    return pipeline, "已添加默认跨管线隔离边界"
 
 
 @fix_registry.register("D1-003")
@@ -114,7 +114,7 @@ def fix_empty_stages(pipeline: PipelineDefinition) -> tuple[PipelineDefinition, 
         if not stage.description and not stage.invocations:
             stage.description = f"[TODO] Define execution actions for {stage.name}"
             fixed += 1
-    return pipeline, f"Added placeholder descriptions to {fixed} empty stage(s)" if fixed else "No empty stages found"
+    return pipeline, f"已为 {fixed} 个空阶段添加占位描述" if fixed else "未发现空阶段"
 
 
 @fix_registry.register("D1-002")
@@ -143,7 +143,7 @@ def fix_add_stage_io(pipeline: PipelineDefinition) -> tuple[PipelineDefinition, 
             pipeline.contracts.stage_io[stage.id] = io_ref
 
     count = len(pipeline.contracts.stage_io)
-    return pipeline, f"Added {count} stage I/O contracts"
+    return pipeline, f"已添加 {count} 个阶段 I/O 契约"
 
 
 @fix_registry.register("D3-001")
@@ -162,7 +162,7 @@ def fix_add_gate_defaults(pipeline: PipelineDefinition) -> tuple[PipelineDefinit
                 )]
             )
             added += 1
-    return pipeline, f"Added basic deterministic gates to {added} stage(s)" if added else "All stages already have gates"
+    return pipeline, f"已为 {added} 个阶段添加基础确定性门禁" if added else "所有阶段已有门禁"
 
 
 @fix_registry.register("D4-002")
@@ -176,7 +176,7 @@ def fix_add_backtrack(pipeline: PipelineDefinition) -> tuple[PipelineDefinition,
             if i > 0:
                 stage.on_failure.backtrack_to = pipeline.stages[i-1].id
                 fixed += 1
-    return pipeline, f"Added backtrack_to to {fixed} repair stage(s)" if fixed else "All repair stages already have backtrack targets"
+    return pipeline, f"已为 {fixed} 个修正阶段添加 backtrack_to" if fixed else "所有修正阶段已有回退目标"
 
 
 # ─── Fix Executor ───────────────────────────────────────────
@@ -192,14 +192,14 @@ class PipelineFixer:
         """Fix a DSL-defined pipeline. Returns list of fix results."""
         path = Path(dsl_path)
         if not path.exists():
-            return [FixResult("", FixStatus.FAILED, f"File not found: {dsl_path}")]
+            return [FixResult("", FixStatus.FAILED, f"文件不存在: {dsl_path}")]
 
         pipeline = PipelineParser.parse_file(path)
         report = self.auditor.audit_from_dsl(pipeline)
 
         if report.total_score >= 75:
             return [FixResult("", FixStatus.SKIPPED,
-                    f"Score {report.total_score}/100 ≥ 75, no automatic fixes needed")]
+                    f"得分 {report.total_score}/100 ≥ 75，无需自动修复")]
 
         session = FixSession(
             pipeline_dsl_path=path,
@@ -230,7 +230,7 @@ class PipelineFixer:
             else:
                 # No improvement this round — stop but keep previous gains
                 session.results.append(FixResult("", FixStatus.FAILED,
-                    f"Round {session.round}: no improvement ({new_score:.1f}), stopping"))
+                    f"第 {session.round} 轮: 无提升 ({new_score:.1f})，停止修复"))
                 break
 
         # Write final result to disk
@@ -254,7 +254,7 @@ class PipelineFixer:
             fix_fn = fix_registry.get_fix(issue)
             if not fix_fn:
                 results.append(FixResult(issue.id, FixStatus.SKIPPED,
-                    f"No fix strategy for {issue.id}"))
+                    f"问题 {issue.id} 无可用修复策略"))
                 continue
 
             if issue.fix_type == FixType.SEMI_AUTO and interactive:
@@ -265,10 +265,10 @@ class PipelineFixer:
             try:
                 session.pipeline_obj, msg = fix_fn(session.pipeline_obj)
                 results.append(FixResult(issue.id, FixStatus.APPLIED if not dry_run else FixStatus.SKIPPED,
-                    f"{'[DRY RUN] ' if dry_run else ''}{msg}"))
+                    f"{'[试运行] ' if dry_run else ''}{msg}"))
             except Exception as e:
                 results.append(FixResult(issue.id, FixStatus.FAILED,
-                    f"Fix failed: {e}"))
+                    f"修复失败: {e}"))
 
         return results
 
@@ -277,12 +277,12 @@ class PipelineFixer:
         from pipeline_cli.auditor import SkillMDParser
         path = Path(skill_path)
         if not path.exists():
-            return [FixResult("", FixStatus.FAILED, f"File not found: {skill_path}")]
+            return [FixResult("", FixStatus.FAILED, f"文件不存在: {skill_path}")]
 
         parser = SkillMDParser()
         parsed = parser.parse(str(path))
         if not parsed:
-            return [FixResult("", FixStatus.SKIPPED, "Not a pipeline")]
+            return [FixResult("", FixStatus.SKIPPED, "不是管线")]
 
         report = self.auditor.audit_from_skill_md(parsed)
         results = []
@@ -294,7 +294,7 @@ class PipelineFixer:
             if not dry_run:
                 path.write_text(fm + content)
             results.append(FixResult("D1-005", FixStatus.APPLIED if not dry_run else FixStatus.SKIPPED,
-                f"{'[DRY RUN] ' if dry_run else ''}Added frontmatter"))
+                f"{'[试运行] ' if dry_run else ''}已添加 frontmatter"))
 
         # Fix: add NEVER section if missing
         if not parsed.has_never_section and parsed.stages:
@@ -306,7 +306,7 @@ class PipelineFixer:
                 with open(path, "a") as f:
                     f.write(template)
             results.append(FixResult("D1-004", FixStatus.APPLIED if not dry_run else FixStatus.SKIPPED,
-                f"{'[DRY RUN] ' if dry_run else ''}Added NEVER section"))
+                f"{'[试运行] ' if dry_run else ''}已添加 NEVER 章节"))
 
         # Fix: add isolation if missing
         if not parsed.has_isolation:
@@ -317,7 +317,7 @@ class PipelineFixer:
                 with open(path, "a") as f:
                     f.write(template)
             results.append(FixResult("D5-001", FixStatus.APPLIED if not dry_run else FixStatus.SKIPPED,
-                f"{'[DRY RUN] ' if dry_run else ''}Added PIPELINE_SCOPE"))
+                f"{'[试运行] ' if dry_run else ''}已添加 PIPELINE_SCOPE"))
 
         return results
 

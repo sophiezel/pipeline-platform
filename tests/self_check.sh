@@ -24,11 +24,11 @@ source .venv/bin/activate && pipeline create --from audit-repair-loop -o "$TMPDI
 echo ""
 
 echo "│ 1.2 validate (should pass)"
-source .venv/bin/activate && pipeline validate "$TMPDIR/test-new.yaml" 2>&1 | grep -q "VALID" && pass "validate new pipeline" || fail "validate new pipeline" "not VALID"
+source .venv/bin/activate && pipeline validate "$TMPDIR/test-new.yaml" 2>&1 | grep -q "通过" && pass "validate new pipeline" || fail "validate new pipeline" "not VALID"
 echo ""
 
 echo "│ 1.3 compile"
-source .venv/bin/activate && pipeline compile "$TMPDIR/test-new.yaml" -o "$TMPDIR/out-new" 2>&1 | grep -q "successful" && pass "compile" || fail "compile" "not successful"
+source .venv/bin/activate && pipeline compile "$TMPDIR/test-new.yaml" -o "$TMPDIR/out-new" 2>&1 | grep -q "编译成功" && pass "compile" || fail "compile" "not successful"
 echo ""
 
 echo "│ 1.4 verify generated files"
@@ -42,7 +42,7 @@ done
 echo ""
 
 echo "│ 1.5 audit DSL"
-source .venv/bin/activate && pipeline audit "$TMPDIR/test-new.yaml" 2>&1 | grep -q "Pipeline Quality" && pass "audit DSL" || fail "audit DSL" "no output"
+source .venv/bin/activate && pipeline audit "$TMPDIR/test-new.yaml" 2>&1 | grep -q "管线质量" && pass "audit DSL" || fail "audit DSL" "no output"
 echo ""
 
 echo "│ 1.6 score"
@@ -50,7 +50,7 @@ source .venv/bin/activate && pipeline score "$TMPDIR/test-new.yaml" 2>&1 | grep 
 echo ""
 
 echo "│ 1.7 fix (dry-run)"
-source .venv/bin/activate && pipeline fix "$TMPDIR/test-new.yaml" --dry-run 2>&1 | grep -q "Score" && pass "fix dry-run" || fail "fix dry-run" "no Score line"
+source .venv/bin/activate && pipeline fix "$TMPDIR/test-new.yaml" --dry-run 2>&1 | grep -q "得分" && pass "fix dry-run" || fail "fix dry-run" "no Score line"
 echo ""
 
 # ═══════════════════════════════════════════
@@ -62,15 +62,15 @@ cp "$TMPDIR/test-new.yaml" "$TMPDIR/test-update.yaml"
 echo ""
 
 echo "│ 2.2 validate modified"
-source .venv/bin/activate && pipeline validate "$TMPDIR/test-update.yaml" 2>&1 | grep -q "VALID" && pass "validate modified" || fail "validate modified" "not VALID"
+source .venv/bin/activate && pipeline validate "$TMPDIR/test-update.yaml" 2>&1 | grep -q "通过" && pass "validate modified" || fail "validate modified" "not VALID"
 echo ""
 
 echo "│ 2.3 re-compile"
-source .venv/bin/activate && pipeline compile "$TMPDIR/test-update.yaml" -o "$TMPDIR/out-update" 2>&1 | grep -q "successful" && pass "re-compile" || fail "re-compile"
+source .venv/bin/activate && pipeline compile "$TMPDIR/test-update.yaml" -o "$TMPDIR/out-update" 2>&1 | grep -q "编译成功" && pass "re-compile" || fail "re-compile"
 echo ""
 
 echo "│ 2.4 re-audit"
-source .venv/bin/activate && pipeline audit "$TMPDIR/test-update.yaml" 2>&1 | grep -q "Pipeline Quality" && pass "re-audit" || fail "re-audit"
+source .venv/bin/activate && pipeline audit "$TMPDIR/test-update.yaml" 2>&1 | grep -q "管线质量" && pass "re-audit" || fail "re-audit"
 echo ""
 
 echo "│ 2.5 score after update"
@@ -82,11 +82,11 @@ echo "┌─ 3. 其他所有功能 ───────────────
 # ═══════════════════════════════════════════
 
 echo "│ 3.1 doctor"
-source .venv/bin/activate && pipeline doctor 2>&1 | grep -q "Environment Checks" && pass "doctor" || fail "doctor"
+source .venv/bin/activate && pipeline doctor 2>&1 | grep -q "环境检查" && pass "doctor" || fail "doctor"
 echo ""
 
 echo "│ 3.2 list"
-source .venv/bin/activate && pipeline list 2>&1 | grep -q "Pipeline Registry" && pass "list" || fail "list"
+source .venv/bin/activate && pipeline list 2>&1 | grep -q "管线注册表" && pass "list" || fail "list"
 echo ""
 
 echo "│ 3.3 score --all"
@@ -106,7 +106,7 @@ echo ""
 
 echo "│ 3.6 validate all templates"
 for tmpl in sequential-engineering sequential-creative dag-analysis audit-repair-loop fan-out-batch; do
-  source .venv/bin/activate && pipeline validate "$TMPDIR/tmpl-$tmpl.yaml" 2>&1 | grep -q "VALID" && pass "  validate: $tmpl" || fail "  validate: $tmpl"
+  source .venv/bin/activate && pipeline validate "$TMPDIR/tmpl-$tmpl.yaml" 2>&1 | grep -q "通过" && pass "  validate: $tmpl" || fail "  validate: $tmpl"
 done
 echo ""
 
@@ -114,20 +114,20 @@ echo "│ 3.7 reverse-engineer (--from-existing)"
 GOAL_MD=$(find ~/.pi/skills -name "SKILL.md" -path "*/goal-pipeline/*" 2>/dev/null | head -1)
 if [ -n "$GOAL_MD" ]; then
   source .venv/bin/activate && pipeline create --from-existing "$GOAL_MD" -o "$TMPDIR/reverse.yaml" 2>&1 | grep -q "✓" && pass "reverse-engineer" || fail "reverse-engineer"
-  source .venv/bin/activate && pipeline validate "$TMPDIR/reverse.yaml" 2>&1 | grep -q "VALID" && pass "  reverse validates" || fail "  reverse validates"
+  source .venv/bin/activate && pipeline validate "$TMPDIR/reverse.yaml" 2>&1 | grep -q "通过" && pass "  reverse validates" || fail "  reverse validates"
 else
   echo "  ⏭️  reverse-engineer (goal-pipeline not found)"
 fi
 echo ""
 
 echo "│ 3.8 validate both example pipelines"
-source .venv/bin/activate && pipeline validate examples/simple-pipeline.yaml 2>&1 | grep -q "VALID" && pass "simple-pipeline" || fail "simple-pipeline"
-source .venv/bin/activate && pipeline validate examples/complex-pipeline.yaml 2>&1 | grep -q "VALID" && pass "complex-pipeline" || fail "complex-pipeline"
+source .venv/bin/activate && pipeline validate examples/simple-pipeline.yaml 2>&1 | grep -q "通过" && pass "simple-pipeline" || fail "simple-pipeline"
+source .venv/bin/activate && pipeline validate examples/complex-pipeline.yaml 2>&1 | grep -q "通过" && pass "complex-pipeline" || fail "complex-pipeline"
 echo ""
 
 echo "│ 3.9 fix with real apply (simple pipeline, should skip >=75)"
 source .venv/bin/activate && cp examples/simple-pipeline.yaml "$TMPDIR/fix-test.yaml"
-source .venv/bin/activate && pipeline fix "$TMPDIR/fix-test.yaml" -y 2>&1 | grep -q "≥ 75\|auto\|Score" && pass "fix skip (score ≥75)" || fail "fix skip"
+source .venv/bin/activate && pipeline fix "$TMPDIR/fix-test.yaml" -y 2>&1 | grep -q "≥ 75\|自动\|得分" && pass "fix skip (score ≥75)" || fail "fix skip"
 echo ""
 
 echo "│ 3.10 --version"

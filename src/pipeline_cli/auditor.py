@@ -64,15 +64,15 @@ class AuditReport:
     @property
     def status_emoji(self) -> str:
         if self.total_score < 40:
-            return "🔴 CRITICAL"
+            return "🔴 严重"
         elif self.total_score < 60:
-            return "🟠 WARN"
+            return "🟠 警告"
         elif self.total_score < 75:
-            return "🟡 FAIR"
+            return "🟡 一般"
         elif self.total_score < 90:
-            return "🟢 GOOD"
+            return "🟢 良好"
         else:
-            return "✅ EXCELLENT"
+            return "✅ 优秀"
 
 
 # ─── SKILL.md Parser ───────────────────────────────────────────────

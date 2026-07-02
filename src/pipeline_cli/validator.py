@@ -66,7 +66,7 @@ class PipelineValidator:
                     report.errors.append(ValidationIssue(
                         rule_id=w.rule_id,
                         severity=Severity.ERROR,
-                        message=f"[STRICT] {w.message}",
+                        message=f"[严格模式] {w.message}",
                         location=w.location,
                     ))
 
@@ -91,9 +91,9 @@ class PipelineValidator:
                 report.warnings.append(ValidationIssue(
                     rule_id="R1",
                     severity=Severity.WARNING,
-                    message=f"Stage '{next_s.id}' declares required_fields but "
-                            f"upstream '{current.id}' schema '{current.output_schema}' "
-                            f"compatibility can't be verified at compile-time (schemas loaded at runtime)",
+                    message=f"阶段 '{next_s.id}' 声明了 required_fields，"
+                            f"但上游 '{current.id}' 的 schema '{current.output_schema}' "
+                            f"无法在编译期验证兼容性（schema 在运行时加载）",
                     location=f"stages.{next_s.id}",
                 ))
 
@@ -107,9 +107,9 @@ class PipelineValidator:
                     report.warnings.append(ValidationIssue(
                         rule_id="R2",
                         severity=Severity.WARNING,
-                        message=f"Stage '{stage.id}' uses LLM-based gate. "
-                                f"LLM self-judgment reliability is ~46%. "
-                                f"Consider replacing with deterministic gate script.",
+                        message=f"阶段 '{stage.id}' 使用了 LLM 门禁。"
+                                f"LLM 自判可靠率约 46%，"
+                                f"建议替换为确定性 gate 脚本。",
                         location=f"stages.{stage.id}.gate",
                     ))
                 elif stage.gate.type == GateType.COMPOSITE:
@@ -121,8 +121,8 @@ class PipelineValidator:
                         report.warnings.append(ValidationIssue(
                             rule_id="R2",
                             severity=Severity.WARNING,
-                            message=f"Stage '{stage.id}' composite gate has {llm_count}/{total} "
-                                    f"LLM components (>50%). Consider reducing LLM dependence.",
+                            message=f"阶段 '{stage.id}' 的复合门禁含 {llm_count}/{total} "
+                                    f"个 LLM 组件（>50%），建议降低 LLM 依赖。",
                             location=f"stages.{stage.id}.gate",
                         ))
 
@@ -141,8 +141,8 @@ class PipelineValidator:
                 report.errors.append(ValidationIssue(
                     rule_id="R3",
                     severity=Severity.ERROR,
-                    message=f"State field '{field}' has multiple writers: {writers}. "
-                            f"Only one stage may write to each state field.",
+                    message=f"状态字段 '{field}' 有多个写入者: {writers}。"
+                            f"每个状态字段只能由一个阶段写入。",
                     location=f"contracts.stage_io",
                 ))
 
@@ -159,17 +159,17 @@ class PipelineValidator:
                     report.errors.append(ValidationIssue(
                         rule_id="R4",
                         severity=Severity.ERROR,
-                        message=f"Stage '{stage.id}' backtracks to '{target_id}' "
-                                f"which does not exist in the pipeline.",
+                        message=f"阶段 '{stage.id}' 回退到 '{target_id}'，"
+                                f"但该阶段不存在。",
                         location=f"stages.{stage.id}.on_failure",
                     ))
                 elif stage_map[target_id].order >= stage.order:
                     report.errors.append(ValidationIssue(
                         rule_id="R4",
                         severity=Severity.ERROR,
-                        message=f"Stage '{stage.id}' (order={stage.order}) backtracks to "
-                                f"'{target_id}' (order={stage_map[target_id].order}). "
-                                f"Backtrack must go to an earlier stage.",
+                        message=f"阶段 '{stage.id}' (order={stage.order}) 回退到 "
+                                f"'{target_id}' (order={stage_map[target_id].order})。"
+                                f"回退目标必须是更早的阶段。",
                         location=f"stages.{stage.id}.on_failure",
                     ))
 
@@ -185,16 +185,16 @@ class PipelineValidator:
                     report.errors.append(ValidationIssue(
                         rule_id="R5",
                         severity=Severity.ERROR,
-                        message=f"Stage '{stage.id}' references pipeline '{inv.pipeline}' "
-                                f"which is the pipeline itself (circular reference).",
+                        message=f"阶段 '{stage.id}' 引用了管线 '{inv.pipeline}'，"
+                                f"形成对自身循环引用。",
                         location=f"stages.{stage.id}.invocations",
                     ))
                 if inv.pipeline and inv.pipeline in stage_map:
                     report.errors.append(ValidationIssue(
                         rule_id="R5",
                         severity=Severity.ERROR,
-                        message=f"Stage '{stage.id}' references pipeline '{inv.pipeline}' "
-                                f"which is a stage ID, not a pipeline name.",
+                        message=f"阶段 '{stage.id}' 引用了 '{inv.pipeline}'，"
+                                f"这是阶段 ID 而非管线名称。",
                         location=f"stages.{stage.id}.invocations",
                     ))
 
@@ -209,9 +209,8 @@ class PipelineValidator:
                 report.warnings.append(ValidationIssue(
                     rule_id="R6",
                     severity=Severity.WARNING,
-                    message=f"Pipeline '{p.name}' has cross-pipeline coordination "
-                            f"but no isolation rules. Without isolation, state "
-                            f"may leak between pipelines.",
+                    message=f"管线 '{p.name}' 配置了跨管线协作，"
+                            f"但未定义隔离规则，状态可能在管线间泄漏。",
                     location="cross_pipeline",
                 ))
 
@@ -230,8 +229,7 @@ class PipelineValidator:
                 report.warnings.append(ValidationIssue(
                     rule_id="R8",
                     severity=Severity.WARNING,
-                    message=f"Pipeline has non-deterministic gates but no NEVER rule "
-                            f"about gate bypass protection.",
+                    message=f"管线存在非确定性门禁，但缺少门禁绕过保护的 NEVER 规则。",
                     location="never_rules",
                 ))
 
@@ -262,7 +260,7 @@ class PipelineValidator:
                         report.errors.append(ValidationIssue(
                             rule_id="R9",
                             severity=Severity.ERROR,
-                            message=f"Stage '{stage.id}' depends_on '{dep}' which does not exist.",
+                            message=f"阶段 '{stage.id}' 的 depends_on 引用 '{dep}'，但该阶段不存在。",
                             location=f"stages.{stage.id}.depends_on",
                         ))
                         continue
@@ -287,7 +285,7 @@ class PipelineValidator:
             report.errors.append(ValidationIssue(
                 rule_id="R9",
                 severity=Severity.ERROR,
-                message=f"Cycle detected in DAG. Nodes in cycle: {cycle_nodes}.",
+                message=f"DAG 中检测到循环，涉及节点: {cycle_nodes}。",
                 location="stages[*].depends_on",
             ))
 
@@ -307,8 +305,7 @@ class PipelineValidator:
                 report.warnings.append(ValidationIssue(
                     rule_id="R9",
                     severity=Severity.WARNING,
-                    message=f"Stage '{stage.id}' may be unreachable: no dependencies, "
-                            f"no dependents, not a routing target.",
+                    message=f"阶段 '{stage.id}' 可能不可达：无依赖、无下游、非路由目标。",
                     location=f"stages.{stage.id}",
                 ))
 
@@ -322,15 +319,15 @@ class PipelineValidator:
                     report.warnings.append(ValidationIssue(
                         rule_id="R10",
                         severity=Severity.WARNING,
-                        message=f"Stage '{stage.id}' has parallel execution but no join mode.",
+                        message=f"阶段 '{stage.id}' 配置了并行执行，但未定义 join 模式。",
                         location=f"stages.{stage.id}.parallel",
                     ))
                 if stage.timeout_minutes and not stage.on_timeout:
                     report.warnings.append(ValidationIssue(
                         rule_id="R10",
                         severity=Severity.WARNING,
-                        message=f"Stage '{stage.id}' has timeout ({stage.timeout_minutes}min) "
-                                f"but no on_timeout strategy.",
+                        message=f"阶段 '{stage.id}' 设置了超时 ({stage.timeout_minutes} 分钟)，"
+                                f"但未定义 on_timeout 策略。",
                         location=f"stages.{stage.id}",
                     ))
 
@@ -345,8 +342,7 @@ class PipelineValidator:
                     report.errors.append(ValidationIssue(
                         rule_id="R12",
                         severity=Severity.ERROR,
-                        message=f"Stage '{stage.id}' has conditional routing "
-                                f"without a default case.",
+                        message=f"阶段 '{stage.id}' 的条件路由缺少 default 分支。",
                         location=f"stages.{stage.id}.routing",
                     ))
 
@@ -364,8 +360,7 @@ class PipelineValidator:
                         report.errors.append(ValidationIssue(
                             rule_id="R13",
                             severity=Severity.ERROR,
-                            message=f"Stage '{stage.id}' routes to '{target}' "
-                                    f"which does not exist in the pipeline.",
+                            message=f"阶段 '{stage.id}' 路由到 '{target}'，但该阶段不存在。",
                             location=f"stages.{stage.id}.routing",
                         ))
 
@@ -379,7 +374,7 @@ class PipelineValidator:
             report.errors.append(ValidationIssue(
                 rule_id="R14",
                 severity=Severity.ERROR,
-                message=f"Pipeline name '{p.name}' is not unique.",
+                message=f"管线名称 '{p.name}' 不唯一。",
                 location="pipeline.name",
             ))
         self._global_names.add(p.name)

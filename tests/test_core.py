@@ -75,7 +75,7 @@ class TestPipelineValidator:
         validator = PipelineValidator()
         report = validator.validate(pipeline)
         assert not report.passed
-        assert any("circular" in e.message.lower() for e in report.errors)
+        assert any("循环" in e.message for e in report.errors)
 
 
 class TestCLIIntegration:
