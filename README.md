@@ -9,6 +9,29 @@
 
 ---
 
+## 安装
+
+需要 **Python 3.10+**。一条命令完成克隆、依赖安装、skill 目录准备与命令链接：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/sophiezel/pipeline-platform/main/install.sh | bash
+```
+
+已克隆仓库时，也可在仓库根目录执行：
+
+```bash
+./install.sh
+```
+
+安装完成后验证：
+
+```bash
+pipeline --version
+pipeline doctor
+```
+
+---
+
 ## 工具形态
 
 一个 CLI 工具，名字叫 `pipeline`，安装在 pi/Agent 环境中。
